@@ -1,15 +1,27 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Download, Edit3 } from 'lucide-react'
 import { usePDFEditor } from '@/contexts/PDFEditorContext'
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
+// Dynamic import for react-pdf to avoid SSR issues
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Document: any, Page: any, pdfjs: any
+
+const loadReactPdf = async () => {
+  if (typeof window !== 'undefined') {
+    const reactPdf = await import('react-pdf')
+    Document = reactPdf.Document
+    Page = reactPdf.Page
+    pdfjs = reactPdf.pdfjs
+    
+    // Set up PDF.js worker
+    pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
+  }
+}
 
 interface PDFViewerProps {
   fileUrl: string
@@ -17,12 +29,18 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ fileUrl, onEdit }: PDFViewerProps) {
-  const { editorState, setPages, setCurrentPage, setZoom } = usePDFEditor()
+  const { setPages, setCurrentPage, setZoom } = usePDFEditor()
   const [numPages, setNumPages] = useState<number>(0)
   const [pageNumber, setPageNumber] = useState<number>(1)
   const [scale, setScale] = useState<number>(1.0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    loadReactPdf()
+  }, [])
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
@@ -32,6 +50,7 @@ export function PDFViewer({ fileUrl, onEdit }: PDFViewerProps) {
   }, [setPages])
 
   const onDocumentLoadError = useCallback((error: Error) => {
+    console.error('PDF load error:', error)
     setError(`Failed to load PDF: ${error.message}`)
     setLoading(false)
   }, [])
@@ -80,6 +99,17 @@ export function PDFViewer({ fileUrl, onEdit }: PDFViewerProps) {
     link.download = 'document.pdf'
     link.click()
   }, [fileUrl])
+
+  if (!isClient) {
+    return (
+      <Card className="w-full h-[600px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading PDF viewer...</p>
+        </div>
+      </Card>
+    )
+  }
 
   if (loading) {
     return (
@@ -164,24 +194,30 @@ export function PDFViewer({ fileUrl, onEdit }: PDFViewerProps) {
 
       {/* PDF Document */}
       <div className="flex justify-center p-4 bg-gray-100">
-        <Document
-          file={fileUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p>Loading PDF...</p>
-            </div>
-          }
-        >
-          <Page
-            pageNumber={pageNumber}
-            scale={scale}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        </Document>
+        {Document && Page ? (
+          <Document
+            file={fileUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                <p>Loading PDF...</p>
+              </div>
+            }
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          </Document>
+        ) : (
+          <div className="text-center p-8">
+            <p>PDF viewer is loading...</p>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Upload, FileText, X } from 'lucide-react'
-import { storage } from '@/lib/supabase/storage'
-import { useAuth } from '@/contexts/AuthContext'
+// import { storage } from '@/lib/supabase/storage'
+// import { useAuth } from '@/contexts/AuthContext'
 
 interface PDFUploadProps {
   onUploadComplete: (fileUrl: string, fileName: string) => void
@@ -15,14 +15,14 @@ interface PDFUploadProps {
 }
 
 export function PDFUpload({ onUploadComplete, onError }: PDFUploadProps) {
-  const { user } = useAuth()
+  // const { user } = useAuth()
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
-    if (!file || !user) return
+    if (!file) return
 
     // Validate file type
     if (file.type !== 'application/pdf') {
@@ -41,27 +41,23 @@ export function PDFUpload({ onUploadComplete, onError }: PDFUploadProps) {
     setUploadProgress(0)
 
     try {
-      // Generate unique file path
-      const filePath = `${user.id}/${Date.now()}-${file.name}`
+      // For now, use local file URL for testing
+      // In production, this would upload to Supabase Storage
+      const fileUrl = URL.createObjectURL(file)
       
-      // Upload file to Supabase Storage
-      const { data, error } = await storage.uploadFile(file, filePath)
-      
-      if (error) {
-        throw new Error(error.message)
+      // Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i)
+        await new Promise(resolve => setTimeout(resolve, 100))
       }
-
-      // Get public URL
-      const publicUrl = await storage.getPublicUrl(filePath)
       
-      setUploadProgress(100)
-      onUploadComplete(publicUrl, file.name)
+      onUploadComplete(fileUrl, file.name)
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Upload failed')
     } finally {
       setUploading(false)
     }
-  }, [user, onUploadComplete, onError])
+  }, [onUploadComplete, onError])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

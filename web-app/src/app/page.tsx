@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PDFUpload } from '@/components/pdf-editor/PDFUpload'
-import { PDFViewer } from '@/components/pdf-editor/PDFViewer'
+import { SimplePDFViewer } from '@/components/pdf-editor/SimplePDFViewer'
 import { ResumeEnhancer } from '@/components/ai-features/ResumeEnhancer'
 import { PhotoToPDFConverter } from '@/components/ai-features/PhotoToPDFConverter'
 import { useAuth } from '@/contexts/AuthContext'
@@ -19,6 +18,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState('upload')
 
   const handleUploadComplete = (fileUrl: string, fileName: string) => {
+    console.log('Upload complete:', { fileUrl, fileName })
     setCurrentFileUrl(fileUrl)
     setCurrentFileName(fileName)
     setActiveTab('viewer')
@@ -34,7 +34,7 @@ export default function HomePage() {
     toast.info('PDF editor opened')
   }
 
-  const handleEnhancedResume = (enhancedText: string) => {
+  const handleEnhancedResume = () => {
     toast.success('Resume enhanced! You can now copy or download the result.')
   }
 
@@ -134,8 +134,9 @@ export default function HomePage() {
                     Edit PDF
                   </Button>
                 </div>
-                <PDFViewer 
+                <SimplePDFViewer 
                   fileUrl={currentFileUrl} 
+                  fileName={currentFileName}
                   onEdit={handleEditPDF}
                 />
               </div>
@@ -168,7 +169,7 @@ export default function HomePage() {
               <p className="text-lg text-gray-600">
                 Convert photos and images into structured PDF documents using AI
               </p>
-            </div>
+        </div>
             <PhotoToPDFConverter onConverted={handleConvertedPDF} />
           </TabsContent>
         </Tabs>
