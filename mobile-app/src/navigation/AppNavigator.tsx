@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import HomeScreen from '../screens/HomeScreen'
 import PDFViewerScreen from '../screens/PDFViewerScreen'
 import CameraScreen from '../screens/CameraScreen'
+import UploadScreen from '../screens/UploadScreen'
 import { useAuth } from '../contexts/AuthContext'
 
 const Tab = createBottomTabNavigator()
@@ -75,6 +76,14 @@ export default function AppNavigator() {
           name="Main" 
           component={MainTabs}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Upload" 
+          component={UploadScreen}
+          options={{ 
+            title: 'Upload PDF',
+            headerBackTitle: 'Back'
+          }}
         />
         <Stack.Screen 
           name="PDFViewer" 

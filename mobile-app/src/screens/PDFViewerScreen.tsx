@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { View, StyleSheet, Dimensions } from 'react-native'
+import { View, StyleSheet, Dimensions, Linking, Alert } from 'react-native'
 import { Text, Button, ProgressBar } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import Pdf from 'react-native-pdf'
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
 
 interface PDFViewerScreenProps {
   route: {
@@ -16,24 +17,44 @@ interface PDFViewerScreenProps {
 
 export default function PDFViewerScreen({ route, navigation }: PDFViewerScreenProps) {
   const { pdfUrl, fileName } = route.params
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const onPageChanged = (page: number, numberOfPages: number) => {
-    setCurrentPage(page)
-    setTotalPages(numberOfPages)
+  const openPDF = async () => {
+    try {
+      setLoading(true)
+      await Linking.openURL(pdfUrl)
+    } catch (err) {
+      setError('Failed to open PDF')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const onLoadComplete = (numberOfPages: number) => {
-    setTotalPages(numberOfPages)
-    setLoading(false)
+  const printPDF = async () => {
+    try {
+      setLoading(true)
+      await Print.printAsync({ uri: pdfUrl })
+    } catch (err) {
+      setError('Failed to print PDF')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const onError = (error: any) => {
-    setError(error.message || 'Failed to load PDF')
-    setLoading(false)
+  const sharePDF = async () => {
+    try {
+      setLoading(true)
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(pdfUrl)
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device')
+      }
+    } catch (err) {
+      setError('Failed to share PDF')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {
@@ -71,21 +92,46 @@ export default function PDFViewerScreen({ route, navigation }: PDFViewerScreenPr
           {fileName}
         </Text>
         <Text variant="bodySmall" style={styles.pageInfo}>
-          Page {currentPage} of {totalPages}
+          PDF Document
         </Text>
       </View>
 
       <View style={styles.pdfContainer}>
-        <Pdf
-          source={{ uri: pdfUrl }}
-          onLoadComplete={onLoadComplete}
-          onPageChanged={onPageChanged}
-          onError={onError}
-          style={styles.pdf}
-        />
+        <View style={styles.placeholder}>
+          <Text variant="headlineSmall" style={styles.placeholderText}>
+            📄 PDF Viewer
+          </Text>
+          <Text variant="bodyMedium" style={styles.placeholderSubtext}>
+            Tap "Open PDF" to view in your default PDF app
+          </Text>
+        </View>
       </View>
 
       <View style={styles.footer}>
+        <Button 
+          mode="contained" 
+          onPress={openPDF}
+          style={styles.button}
+          loading={loading}
+        >
+          Open PDF
+        </Button>
+        <Button 
+          mode="outlined" 
+          onPress={printPDF}
+          style={styles.button}
+          loading={loading}
+        >
+          Print
+        </Button>
+        <Button 
+          mode="outlined" 
+          onPress={sharePDF}
+          style={styles.button}
+          loading={loading}
+        >
+          Share
+        </Button>
         <Button 
           mode="outlined" 
           onPress={() => navigation.goBack()}
@@ -141,11 +187,20 @@ const styles = StyleSheet.create({
   },
   pdfContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  pdf: {
-    flex: 1,
-    width: width,
-    height: height - 200,
+  placeholder: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  placeholderText: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  placeholderSubtext: {
+    textAlign: 'center',
+    color: '#666',
   },
   footer: {
     padding: 16,
